@@ -23,9 +23,13 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun RegisterScreen(
     uiState: AuthUiState,
-    onRegister: (String, String) -> Unit,
+    onRegister: (String, String, String) -> Unit,
     onGoToLogin: () -> Unit
 ) {
+    var displayName by rememberSaveable {
+        mutableStateOf("")
+    }
+
     var email by rememberSaveable {
         mutableStateOf("")
     }
@@ -47,6 +51,20 @@ fun RegisterScreen(
         )
 
         OutlinedTextField(
+            value = displayName,
+            onValueChange = {
+                displayName = it
+            },
+            label = {
+                Text("Display name")
+            },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp)
+        )
+
+        OutlinedTextField(
             value = email,
             onValueChange = {
                 email = it
@@ -57,7 +75,7 @@ fun RegisterScreen(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 24.dp)
+                .padding(top = 12.dp)
         )
 
         OutlinedTextField(
@@ -89,9 +107,15 @@ fun RegisterScreen(
         } else {
             Button(
                 onClick = {
-                    onRegister(email, password)
+                    onRegister(
+                        displayName,
+                        email,
+                        password
+                    )
                 },
-                enabled = email.isNotBlank() && password.isNotBlank(),
+                enabled = displayName.isNotBlank()
+                        && email.isNotBlank()
+                        && password.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 20.dp)

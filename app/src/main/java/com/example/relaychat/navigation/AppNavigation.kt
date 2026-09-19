@@ -17,6 +17,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.relaychat.ui.auth.AuthViewModel
 import com.example.relaychat.ui.auth.LoginScreen
 import com.example.relaychat.ui.auth.RegisterScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.relaychat.ui.users.UserListScreen
+import com.example.relaychat.ui.users.UsersViewModel
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 
 @Composable
 fun AppNavigation(
@@ -63,8 +68,12 @@ fun AppNavigation(
         composable("register") {
             RegisterScreen(
                 uiState = uiState,
-                onRegister = { email, password ->
-                    authViewModel.register(email, password)
+                onRegister = { displayName, email, password ->
+                    authViewModel.register(
+                        displayName = displayName,
+                        email = email,
+                        password = password
+                    )
                 },
                 onGoToLogin = {
                     authViewModel.clearError()
@@ -74,12 +83,15 @@ fun AppNavigation(
         }
 
         composable("home") {
+            val usersViewModel: UsersViewModel = viewModel()
+            val usersUiState by usersViewModel.uiState.collectAsState()
+
             Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
             ) {
-                Text("Logged in to RelayChat")
 
                 Button(
                     onClick = {
@@ -94,6 +106,13 @@ fun AppNavigation(
                 ) {
                     Text("Logout")
                 }
+
+                UserListScreen(
+                    uiState = usersUiState,
+                    onUserClick = { user ->
+                        // Chat opening will be connected in Phase 5.
+                    }
+                )
             }
         }
     }

@@ -3,6 +3,7 @@ package com.example.relaychat.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.relaychat.data.repository.AuthRepository
+import com.example.relaychat.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,18 +16,20 @@ data class AuthUiState(
 )
 
 class AuthViewModel(
-    private val repository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository = AuthRepository(),
+    private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         AuthUiState(
-            isLoggedIn = repository.getCurrentUser() != null
+            isLoggedIn = authRepository.getCurrentUser() != null
         )
     )
 
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     fun register(
+        displayName: String,
         email: String,
         password: String
     ) {
@@ -35,15 +38,32 @@ class AuthViewModel(
                 isLoading = true
             )
 
-            repository.register(email, password)
-                .onSuccess {
-                    _uiState.value = AuthUiState(
-                        isLoggedIn = true
+            authRepository.register(email, password)
+                .onSuccess { firebaseUser ->
+
+                    val profileResult = userRepository.createUserProfile(
+                        uid = firebaseUser.uid,
+                        displayName = displayName,
+                        email = firebaseUser.email ?: email
                     )
+
+                    profileResult
+                        .onSuccess {
+                            _uiState.value = AuthUiState(
+                                isLoggedIn = true
+                            )
+                        }
+                        .onFailure { error ->
+                            _uiState.value = AuthUiState(
+                                errorMessage = error.message
+                                    ?: "Failed to create user profile."
+                            )
+                        }
                 }
                 .onFailure { error ->
                     _uiState.value = AuthUiState(
-                        errorMessage = error.message ?: "Registration failed."
+                        errorMessage = error.message
+                            ?: "Registration failed."
                     )
                 }
         }
@@ -58,22 +78,38 @@ class AuthViewModel(
                 isLoading = true
             )
 
-            repository.login(email, password)
-                .onSuccess {
-                    _uiState.value = AuthUiState(
-                        isLoggedIn = true
+            authRepository.login(email, password)
+                .onSuccess { firebaseUser ->
+
+                    val profileResult = userRepository.ensureUserProfile(
+                        uid = firebaseUser.uid,
+                        email = firebaseUser.email ?: email
                     )
+
+                    profileResult
+                        .onSuccess {
+                            _uiState.value = AuthUiState(
+                                isLoggedIn = true
+                            )
+                        }
+                        .onFailure { error ->
+                            _uiState.value = AuthUiState(
+                                errorMessage = error.message
+                                    ?: "Failed to prepare user profile."
+                            )
+                        }
                 }
                 .onFailure { error ->
                     _uiState.value = AuthUiState(
-                        errorMessage = error.message ?: "Login failed."
+                        errorMessage = error.message
+                            ?: "Login failed."
                     )
                 }
         }
     }
 
     fun logout() {
-        repository.logout()
+        authRepository.logout()
 
         _uiState.value = AuthUiState(
             isLoggedIn = false
