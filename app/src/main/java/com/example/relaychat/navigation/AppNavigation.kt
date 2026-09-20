@@ -22,6 +22,13 @@ import com.example.relaychat.ui.users.UserListScreen
 import com.example.relaychat.ui.users.UsersViewModel
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import android.net.Uri
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.relaychat.ui.chat.ChatScreen
+import com.google.firebase.auth.FirebaseAuth
+
+
 
 @Composable
 fun AppNavigation(
@@ -110,8 +117,34 @@ fun AppNavigation(
                 UserListScreen(
                     uiState = usersUiState,
                     onUserClick = { user ->
-                        // Chat opening will be connected in Phase 5.
+                        navController.navigate(
+                            "chat/${user.uid}/${Uri.encode(user.displayName)}"
+                        )
                     }
+                )
+
+            }
+        }
+
+        composable(
+            route = "chat/{otherUid}/{otherName}",
+            arguments = listOf(
+                navArgument("otherUid") { type = NavType.StringType },
+                navArgument("otherName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val otherUid = backStackEntry.arguments?.getString("otherUid").orEmpty()
+            val otherName = backStackEntry.arguments?.getString("otherName").orEmpty()
+            val myUid = FirebaseAuth.getInstance().currentUser?.uid
+
+            if (myUid == null || otherUid.isEmpty()) {
+                Text("Something went wrong. Please go back and try again.")
+            } else {
+                ChatScreen(
+                    myUid = myUid,
+                    otherUid = otherUid,
+                    otherName = otherName,
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
