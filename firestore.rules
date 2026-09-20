@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+
+      allow read: if request.auth != null;
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.uid == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+
+
+      allow read: if request.auth != null && (
+        (resource == null
+          && request.auth.uid in conversationId.split('_'))
+        || (resource != null
+          && request.auth.uid in resource.data.memberIds)
+      );
+
+
+      allow create: if request.auth != null
+        && request.resource.data.memberIds.size() == 2
+        && request.auth.uid in request.resource.data.memberIds
+        && conversationId == request.resource.data.memberIds[0]
+             + '_' + request.resource.data.memberIds[1]
+        && request.resource.data.id == conversationId;
+
+
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.memberIds
+        && request.resource.data.memberIds == resource.data.memberIds;
+
+      allow delete: if false;
+
+
+      match /messages/{messageId} {
+
+        function conversation() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+
+        allow read: if request.auth != null
+          && request.auth.uid in conversation().memberIds;
+
+        allow create: if request.auth != null
+          && request.auth.uid in conversation().memberIds
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.receiverId in conversation().memberIds
+          && request.resource.data.receiverId != request.auth.uid
+          && request.resource.data.id == messageId
+          && request.resource.data.conversationId == conversationId
+          && request.resource.data.type == 'text'
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}
+
+
