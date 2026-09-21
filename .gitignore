@@ -14,3 +14,7 @@
 .cxx
 local.properties
 /.idea/
+# Notification worker secrets and dependencies
+notification-worker/node_modules/
+notification-worker/serviceAccountKey.json
+*firebase-adminsdk*.json
