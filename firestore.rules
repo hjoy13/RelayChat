@@ -17,12 +17,13 @@ service cloud.firestore {
     match /conversations/{conversationId} {
 
 
-      allow read: if request.auth != null && (
-        (resource == null
-          && request.auth.uid in conversationId.split('_'))
-        || (resource != null
-          && request.auth.uid in resource.data.memberIds)
-      );
+            allow get: if request.auth != null
+              && (resource == null
+                  ? request.auth.uid in conversationId.split('_')
+                  : request.auth.uid in resource.data.memberIds);
+
+            allow list: if request.auth != null
+              && request.auth.uid in resource.data.memberIds;
 
 
       allow create: if request.auth != null

@@ -9,6 +9,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import com.example.relaychat.data.model.Conversation
 
 
 class ChatRepository(
@@ -100,6 +101,31 @@ class ChatRepository(
                         )
                     }
                     trySend(messages)
+                }
+            }
+
+        awaitClose { registration.remove() }
+    }
+
+    fun observeConversations(myUid: String): Flow<List<Conversation>> = callbackFlow {
+        val registration = conversations
+            .whereArrayContains("memberIds", myUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val list = snapshot.documents
+                        .mapNotNull { doc ->
+                            doc.toObject(
+                                Conversation::class.java,
+                                DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+                            )
+                        }
+                        .filter { it.lastMessage.isNotEmpty() }
+                        .sortedByDescending { it.lastMessageAt?.toDate()?.time ?: 0L }
+                    trySend(list)
                 }
             }
 

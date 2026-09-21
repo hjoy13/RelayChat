@@ -75,4 +75,15 @@ class UserRepository(
                 }
         }
     }
+
+    suspend fun getUser(uid: String): Result<User?> {
+        return runCatching {
+            firestore
+                .collection("users")
+                .document(uid)
+                .get()
+                .await()
+                .toObject(User::class.java)
+        }
+    }
 }

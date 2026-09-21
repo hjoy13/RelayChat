@@ -27,7 +27,12 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.example.relaychat.ui.chat.ChatScreen
 import com.google.firebase.auth.FirebaseAuth
-
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import com.example.relaychat.ui.conversations.ConversationListScreen
+import com.example.relaychat.ui.conversations.ConversationsViewModel
+import com.example.relaychat.ui.conversations.ConversationsViewModelFactory
 
 
 @Composable
@@ -90,6 +95,54 @@ fun AppNavigation(
         }
 
         composable("home") {
+            val myUid = FirebaseAuth.getInstance().currentUser?.uid
+
+            if (myUid != null) {
+                val conversationsViewModel: ConversationsViewModel = viewModel(
+                    key = "conversations_$myUid",
+                    factory = ConversationsViewModelFactory(myUid)
+                )
+                val conversationsUiState by conversationsViewModel.uiState.collectAsState()
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(onClick = { navController.navigate("users") }) {
+                            Text("New chat")
+                        }
+                        Button(
+                            onClick = {
+                                authViewModel.logout()
+                                navController.navigate("login") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            }
+                        ) {
+                            Text("Logout")
+                        }
+                    }
+
+                    ConversationListScreen(
+                        uiState = conversationsUiState,
+                        myUid = myUid,
+                        onConversationClick = { item ->
+                            navController.navigate(
+                                "chat/${item.otherUid}/${Uri.encode(item.otherName)}"
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        composable("users") {
             val usersViewModel: UsersViewModel = viewModel()
             val usersUiState by usersViewModel.uiState.collectAsState()
 
@@ -99,19 +152,11 @@ fun AppNavigation(
                     .statusBarsPadding()
                     .navigationBarsPadding()
             ) {
-
                 Button(
-                    onClick = {
-                        authViewModel.logout()
-
-                        navController.navigate("login") {
-                            popUpTo("home") {
-                                inclusive = true
-                            }
-                        }
-                    }
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    Text("Logout")
+                    Text("Back")
                 }
 
                 UserListScreen(
@@ -119,10 +164,11 @@ fun AppNavigation(
                     onUserClick = { user ->
                         navController.navigate(
                             "chat/${user.uid}/${Uri.encode(user.displayName)}"
-                        )
+                        ) {
+                            popUpTo("users") { inclusive = true }
+                        }
                     }
                 )
-
             }
         }
 
