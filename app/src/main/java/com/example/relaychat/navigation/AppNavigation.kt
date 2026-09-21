@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.example.relaychat.ui.conversations.ConversationListScreen
 import com.example.relaychat.ui.conversations.ConversationsViewModel
 import com.example.relaychat.ui.conversations.ConversationsViewModelFactory
+import android.util.Log
+import com.example.relaychat.data.repository.UserRepository
 
 
 @Composable
@@ -55,6 +57,13 @@ fun AppNavigation(
                 popUpTo("login") {
                     inclusive = true
                 }
+            }
+
+            val uid = FirebaseAuth.getInstance().currentUser?.uid
+            if (uid != null) {
+                UserRepository().saveDeviceToken(uid)
+                    .onSuccess { Log.d("RelayChat", "Device token saved") }
+                    .onFailure { Log.e("RelayChat", "Device token save failed", it) }
             }
         }
     }

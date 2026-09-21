@@ -4,6 +4,9 @@ import com.example.relaychat.data.model.User
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import com.google.firebase.installations.FirebaseInstallations
+import com.google.firebase.messaging.FirebaseMessaging
+
 
 class UserRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -84,6 +87,27 @@ class UserRepository(
                 .get()
                 .await()
                 .toObject(User::class.java)
+        }
+    }
+
+    suspend fun saveDeviceToken(uid: String): Result<Unit> {
+        return runCatching {
+            val token = FirebaseMessaging.getInstance().token.await()
+            val deviceId = FirebaseInstallations.getInstance().id.await()
+
+            val deviceData = hashMapOf(
+                "token" to token,
+                "updatedAt" to FieldValue.serverTimestamp(),
+                "platform" to "android"
+            )
+
+            firestore
+                .collection("users")
+                .document(uid)
+                .collection("devices")
+                .document(deviceId)
+                .set(deviceData)
+                .await()
         }
     }
 }
