@@ -24,7 +24,8 @@ data class ChatUiState(
     val isSending: Boolean = false,
     val errorMessage: String? = null,
     val replyingTo: Message? = null,
-    val isOtherTyping: Boolean = false
+    val isOtherTyping: Boolean = false,
+    val otherLastReadAt: Long = 0L
 )
 
 class ChatViewModel(
@@ -71,12 +72,21 @@ class ChatViewModel(
                 }
                 .collect { messages ->
                     _uiState.update { it.copy(messages = messages, isLoading = false) }
+                    if (messages.isNotEmpty()) {
+                        repository.markAsRead(conversationId, myUid)
+                    }
                 }
         }
         viewModelScope.launch {
             repository.observeTyping(conversationId, otherUid)
                 .collect { typing ->
                     _uiState.update { it.copy(isOtherTyping = typing) }
+                }
+        }
+        viewModelScope.launch {
+            repository.observeOtherLastRead(conversationId, otherUid)
+                .collect { lastReadAt ->
+                    _uiState.update { it.copy(otherLastReadAt = lastReadAt) }
                 }
         }
     }

@@ -158,4 +158,25 @@ class ChatRepository(
 
         awaitClose { registration.remove() }
     }
+    suspend fun markAsRead(conversationId: String, myUid: String) {
+        conversations.document(conversationId)
+            .update("lastReadAt.$myUid", FieldValue.serverTimestamp())
+            .await()
+    }
+
+    fun observeOtherLastRead(conversationId: String, otherUid: String): Flow<Long> = callbackFlow {
+        val registration = conversations
+            .document(conversationId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val readMap = snapshot?.get("lastReadAt") as? Map<*, *>
+                val timestamp = readMap?.get(otherUid) as? com.google.firebase.Timestamp
+                trySend(timestamp?.toDate()?.time ?: 0L)
+            }
+
+        awaitClose { registration.remove() }
+    }
 }

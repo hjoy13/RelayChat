@@ -73,10 +73,16 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.messages, key = { it.id }) { message ->
+                        val isMine = message.senderId == myUid
+                        val isLastMine = isMine && message.id == state.messages.lastOrNull { it.senderId == myUid }?.id
+                        val isSeen = isLastMine &&
+                                (message.createdAt?.toDate()?.time ?: 0L) <= state.otherLastReadAt
+
                         MessageBubble(
                             message = message,
-                            isMine = message.senderId == myUid,
-                            onReply = { viewModel.setReplyTarget(message) }
+                            isMine = isMine,
+                            onReply = { viewModel.setReplyTarget(message) },
+                            showSeen = isSeen
                         )
                     }
                 }
@@ -161,7 +167,12 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(message: Message, isMine: Boolean, onReply: () -> Unit) {
+private fun MessageBubble(
+    message: Message,
+    isMine: Boolean,
+    onReply: () -> Unit,
+    showSeen: Boolean
+) {
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val time = message.createdAt?.toDate()?.let { timeFormat.format(it) } ?: ""
 
@@ -205,6 +216,14 @@ private fun MessageBubble(message: Message, isMine: Boolean, onReply: () -> Unit
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.align(Alignment.End)
                 )
+                if (showSeen) {
+                    Text(
+                        text = "Seen",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
             }
         }
     }
