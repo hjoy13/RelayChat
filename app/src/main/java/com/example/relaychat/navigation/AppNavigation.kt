@@ -35,8 +35,23 @@ import com.example.relaychat.ui.conversations.ConversationsViewModel
 import com.example.relaychat.ui.conversations.ConversationsViewModelFactory
 import android.util.Log
 import com.example.relaychat.data.repository.UserRepository
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(
     authViewModel: AuthViewModel
@@ -112,41 +127,55 @@ fun AppNavigation(
                     factory = ConversationsViewModelFactory(myUid)
                 )
                 val conversationsUiState by conversationsViewModel.uiState.collectAsState()
+                var menuExpanded by remember { mutableStateOf(false) }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(onClick = { navController.navigate("users") }) {
-                            Text("New chat")
-                        }
-                        Button(
-                            onClick = {
-                                authViewModel.logout()
-                                navController.navigate("login") {
-                                    popUpTo("home") { inclusive = true }
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("RelayChat") },
+                            actions = {
+                                IconButton(onClick = { menuExpanded = true }) {
+                                    Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                                }
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Logout") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            authViewModel.logout()
+                                            navController.navigate("login") {
+                                                popUpTo("home") { inclusive = true }
+                                            }
+                                        }
+                                    )
                                 }
                             }
-                        ) {
-                            Text("Logout")
+                        )
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(onClick = { navController.navigate("users") }) {
+                            Icon(Icons.Filled.Add, contentDescription = "New chat")
                         }
                     }
-
-                    ConversationListScreen(
-                        uiState = conversationsUiState,
-                        myUid = myUid,
-                        onConversationClick = { item ->
-                            navController.navigate(
-                                "chat/${item.otherUid}/${Uri.encode(item.otherName)}"
-                            )
-                        }
-                    )
+                ) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) {
+                        ConversationListScreen(
+                            uiState = conversationsUiState,
+                            myUid = myUid,
+                            onConversationClick = { item ->
+                                navController.navigate(
+                                    "chat/${item.otherUid}/${Uri.encode(item.otherName)}"
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
