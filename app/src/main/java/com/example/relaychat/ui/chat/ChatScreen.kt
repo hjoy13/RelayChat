@@ -17,6 +17,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.relaychat.data.model.Message
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import com.example.relaychat.ui.conversations.AvatarCircle
 
 @Composable
 fun ChatScreen(
@@ -53,7 +56,12 @@ fun ChatScreen(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(onClick = onBack) { Text("Back") }
+            IconButton(onClick = onBack) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(Modifier.width(4.dp))
+            AvatarCircle(name = otherName, size = 32.dp)
+            Spacer(Modifier.width(8.dp))
             Text(text = otherName, style = MaterialTheme.typography.titleMedium)
         }
         HorizontalDivider()
