@@ -20,7 +20,8 @@ data class ConversationItem(
     val otherName: String,
     val lastMessage: String,
     val lastMessageAt: Timestamp?,
-    val lastSenderId: String
+    val lastSenderId: String,
+    val isUnread: Boolean
 )
 
 data class ConversationsUiState(
@@ -57,13 +58,18 @@ class ConversationsViewModel(
                         val otherUid = conversation.memberIds.firstOrNull { it != myUid }
                             ?: return@mapNotNull null
 
+                        val myLastReadAt = conversation.lastReadAt?.get(myUid)?.toDate()?.time ?: 0L
+                        val lastMessageTime = conversation.lastMessageAt?.toDate()?.time ?: 0L
+                        val isUnread = conversation.lastSenderId != myUid && lastMessageTime > myLastReadAt
+
                         ConversationItem(
                             conversationId = conversation.id,
                             otherUid = otherUid,
                             otherName = nameFor(otherUid),
                             lastMessage = conversation.lastMessage,
                             lastMessageAt = conversation.lastMessageAt,
-                            lastSenderId = conversation.lastSenderId
+                            lastSenderId = conversation.lastSenderId,
+                            isUnread = isUnread
                         )
                     }
                     _uiState.update {

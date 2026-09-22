@@ -9,5 +9,6 @@ data class Conversation(
     val lastMessageAt: Timestamp? = null,
     val lastSenderId: String = "",
     val createdAt: Timestamp? = null,
-    val updatedAt: Timestamp? = null
+    val updatedAt: Timestamp? = null,
+    val lastReadAt: Map<String, Timestamp>? = null
 )

@@ -29,6 +29,7 @@ import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun ConversationListScreen(
@@ -101,11 +102,13 @@ fun ConversationListScreen(
                                     Text(
                                         text = item.otherName,
                                         style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = if (item.isUnread) FontWeight.Bold else FontWeight.Normal,
                                         modifier = Modifier.weight(1f)
                                     )
                                     Text(
                                         text = formatTime(item.lastMessageAt),
-                                        style = MaterialTheme.typography.labelSmall
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (item.isUnread) FontWeight.Bold else FontWeight.Normal
                                     )
                                 }
 
@@ -114,6 +117,7 @@ fun ConversationListScreen(
                                     text = prefix + item.lastMessage,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
+                                    fontWeight = if (item.isUnread) FontWeight.Bold else FontWeight.Normal,
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
                             }
