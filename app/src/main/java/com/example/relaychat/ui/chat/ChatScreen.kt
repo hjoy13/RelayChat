@@ -64,6 +64,8 @@ fun ChatScreen(
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 state.messages.isEmpty() -> Text(
                     text = "No messages yet. Say hello!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.Center)
                 )
                 else -> LazyColumn(
@@ -114,12 +116,12 @@ fun ChatScreen(
             }
         }
 
-        // Reply preview bar (shown above input when replying)
         state.replyingTo?.let { replyTarget ->
+            HorizontalDivider()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
@@ -139,29 +141,45 @@ fun ChatScreen(
                         maxLines = 1
                     )
                 }
-                TextButton(onClick = viewModel::clearReplyTarget) {
+                Spacer(Modifier.width(4.dp))
+                IconButton(onClick = viewModel::clearReplyTarget) {
                     Text("✕")
                 }
             }
         }
 
         // Input row
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            tonalElevation = 2.dp,
+            shadowElevation = 4.dp
         ) {
-            OutlinedTextField(
-                value = state.inputText,
-                onValueChange = viewModel::onInputChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Message") },
-                maxLines = 4
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(
-                onClick = viewModel::sendMessage,
-                enabled = state.inputText.isNotBlank() && !state.isSending
-            ) { Text("Send") }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = state.inputText,
+                    onValueChange = viewModel::onInputChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Message") },
+                    maxLines = 4
+                )
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = viewModel::sendMessage,
+                    enabled = state.inputText.isNotBlank() && !state.isSending
+                ) {
+                    if (state.isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Send")
+                    }
+                }
+            }
         }
     }
 }
