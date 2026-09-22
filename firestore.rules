@@ -42,15 +42,28 @@ service cloud.firestore {
       allow update: if request.auth != null
         && request.auth.uid in resource.data.memberIds
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['lastMessage', 'lastMessageAt', 'lastSenderId', 'updatedAt'])
+             .hasOnly(['lastMessage', 'lastMessageAt', 'lastSenderId', 'updatedAt', 'typing'])
         && request.resource.data.memberIds == resource.data.memberIds
         && request.resource.data.id == resource.data.id
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.lastSenderId == request.auth.uid
-        && request.resource.data.lastMessage is string
-        && request.resource.data.lastMessage.size() <= 2000
-        && request.resource.data.lastMessageAt == request.time
-        && request.resource.data.updatedAt == request.time;
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastMessage', 'lastMessageAt', 'lastSenderId', 'updatedAt'])
+          || (
+            request.resource.data.lastSenderId == request.auth.uid
+            && request.resource.data.lastMessage is string
+            && request.resource.data.lastMessage.size() <= 2000
+            && request.resource.data.lastMessageAt == request.time
+            && request.resource.data.updatedAt == request.time
+          )
+        )
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['typing'])
+          || (
+            request.resource.data.typing is map
+            && request.resource.data.typing.diff(resource.data.get('typing', {})).affectedKeys()
+                 .hasOnly([request.auth.uid])
+          )
+        );
 
       allow delete: if false;
 

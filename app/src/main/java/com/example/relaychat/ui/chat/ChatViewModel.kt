@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 
 data class ChatUiState(
@@ -19,7 +22,9 @@ data class ChatUiState(
     val inputText: String = "",
     val isLoading: Boolean = true,
     val isSending: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val replyingTo: Message? = null,
+    val isOtherTyping: Boolean = false
 )
 
 class ChatViewModel(
@@ -68,10 +73,36 @@ class ChatViewModel(
                     _uiState.update { it.copy(messages = messages, isLoading = false) }
                 }
         }
+        viewModelScope.launch {
+            repository.observeTyping(conversationId, otherUid)
+                .collect { typing ->
+                    _uiState.update { it.copy(isOtherTyping = typing) }
+                }
+        }
     }
+
+    private var typingJob: Job? = null
 
     fun onInputChange(text: String) {
         _uiState.update { it.copy(inputText = text) }
+
+        typingJob?.cancel()
+        viewModelScope.launch {
+            repository.setTyping(conversationId, myUid, true)
+        }
+        typingJob = viewModelScope.launch {
+            delay(3000)
+            repository.setTyping(conversationId, myUid, false)
+        }
+    }
+
+
+    fun setReplyTarget(message: Message) {
+        _uiState.update { it.copy(replyingTo = message) }
+    }
+
+    fun clearReplyTarget() {
+        _uiState.update { it.copy(replyingTo = null) }
     }
 
     fun sendMessage() {
@@ -79,12 +110,26 @@ class ChatViewModel(
         val text = state.inputText.trim()
         if (text.isEmpty() || state.isSending) return
 
+        val replyTo = state.replyingTo
         _uiState.update { it.copy(isSending = true, errorMessage = null) }
+
+        typingJob?.cancel()
+        viewModelScope.launch {
+            repository.setTyping(conversationId, myUid, false)
+        }
 
         viewModelScope.launch {
             try {
-                repository.sendMessage(conversationId, myUid, otherUid, text)
-                _uiState.update { it.copy(inputText = "", isSending = false) }
+                repository.sendMessage(
+                    conversationId = conversationId,
+                    senderId = myUid,
+                    receiverId = otherUid,
+                    text = text,
+                    replyToMessageId = replyTo?.id,
+                    replyToText = replyTo?.text,
+                    replyToSenderId = replyTo?.senderId
+                )
+                _uiState.update { it.copy(inputText = "", isSending = false, replyingTo = null) }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(isSending = false, errorMessage = e.message ?: "Message failed to send")
@@ -95,6 +140,14 @@ class ChatViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        typingJob?.cancel()
+        CoroutineScope(Dispatchers.IO).launch {
+            repository.setTyping(conversationId, myUid, false)
+        }
     }
 }
 

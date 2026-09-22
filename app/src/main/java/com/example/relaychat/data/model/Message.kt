@@ -9,5 +9,8 @@ data class Message(
     val receiverId: String = "",
     val text: String = "",
     val createdAt: Timestamp? = null,
-    val type: String = "text"
+    val type: String = "text",
+    val replyToMessageId: String? = null,
+    val replyToText: String? = null,
+    val replyToSenderId: String? = null
 )

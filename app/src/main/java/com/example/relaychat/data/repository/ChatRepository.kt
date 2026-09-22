@@ -47,7 +47,10 @@ class ChatRepository(
         conversationId: String,
         senderId: String,
         receiverId: String,
-        text: String
+        text: String,
+        replyToMessageId: String? = null,
+        replyToText: String? = null,
+        replyToSenderId: String? = null
     ) {
         val trimmed = text.trim()
         require(trimmed.isNotEmpty()) { "Message cannot be empty" }
@@ -57,18 +60,22 @@ class ChatRepository(
 
         val batch = firestore.batch()
 
-        batch.set(
-            messageRef,
-            mapOf(
-                "id" to messageRef.id,
-                "conversationId" to conversationId,
-                "senderId" to senderId,
-                "receiverId" to receiverId,
-                "text" to trimmed,
-                "createdAt" to FieldValue.serverTimestamp(),
-                "type" to "text"
-            )
+        val messageData = mutableMapOf<String, Any?>(
+            "id" to messageRef.id,
+            "conversationId" to conversationId,
+            "senderId" to senderId,
+            "receiverId" to receiverId,
+            "text" to trimmed,
+            "createdAt" to FieldValue.serverTimestamp(),
+            "type" to "text"
         )
+        if (replyToMessageId != null) {
+            messageData["replyToMessageId"] = replyToMessageId
+            messageData["replyToText"] = replyToText
+            messageData["replyToSenderId"] = replyToSenderId
+        }
+
+        batch.set(messageRef, messageData)
 
         batch.update(
             conversationRef,
@@ -82,7 +89,6 @@ class ChatRepository(
 
         batch.commit().await()
     }
-
     fun observeMessages(conversationId: String): Flow<List<Message>> = callbackFlow {
         val registration = conversations
             .document(conversationId)
@@ -127,6 +133,27 @@ class ChatRepository(
                         .sortedByDescending { it.lastMessageAt?.toDate()?.time ?: 0L }
                     trySend(list)
                 }
+            }
+
+        awaitClose { registration.remove() }
+    }
+
+    suspend fun setTyping(conversationId: String, myUid: String, isTyping: Boolean) {
+        conversations.document(conversationId)
+            .update("typing.$myUid", isTyping)
+            .await()
+    }
+
+    fun observeTyping(conversationId: String, otherUid: String): Flow<Boolean> = callbackFlow {
+        val registration = conversations
+            .document(conversationId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val typingMap = snapshot?.get("typing") as? Map<*, *>
+                trySend(typingMap?.get(otherUid) as? Boolean ?: false)
             }
 
         awaitClose { registration.remove() }

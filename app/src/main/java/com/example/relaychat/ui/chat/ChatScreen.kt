@@ -1,10 +1,13 @@
 package com.example.relaychat.ui.chat
 
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,10 +73,24 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(state.messages, key = { it.id }) { message ->
-                        MessageBubble(message = message, isMine = message.senderId == myUid)
+                        MessageBubble(
+                            message = message,
+                            isMine = message.senderId == myUid,
+                            onReply = { viewModel.setReplyTarget(message) }
+                        )
                     }
                 }
             }
+        }
+
+        // Typing indicator
+        if (state.isOtherTyping) {
+            Text(
+                text = "$otherName is typing…",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+            )
         }
 
         // Error banner
@@ -88,6 +105,37 @@ fun ChatScreen(
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = viewModel::clearError) { Text("Dismiss") }
+            }
+        }
+
+        // Reply preview bar (shown above input when replying)
+        state.replyingTo?.let { replyTarget ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = if (replyTarget.senderId == myUid) "Replying to yourself" else "Replying to $otherName",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = replyTarget.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1
+                    )
+                }
+                TextButton(onClick = viewModel::clearReplyTarget) {
+                    Text("✕")
+                }
             }
         }
 
@@ -113,7 +161,7 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(message: Message, isMine: Boolean) {
+private fun MessageBubble(message: Message, isMine: Boolean, onReply: () -> Unit) {
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val time = message.createdAt?.toDate()?.let { timeFormat.format(it) } ?: ""
 
@@ -124,9 +172,33 @@ private fun MessageBubble(message: Message, isMine: Boolean) {
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = if (isMine) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {},
+                onLongClick = onReply
+            )
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                if (message.replyToMessageId != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                RoundedCornerShape(6.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = message.replyToText.orEmpty(),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 2
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
                 Text(text = message.text)
                 Text(
                     text = time,
